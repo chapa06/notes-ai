@@ -1,0 +1,21 @@
+# Основные зависимости для Telegram бота
+python-telegram-bot==21.0
+requests==2.31.0
+aiohttp==3.8.5
+python-dotenv==1.0.0
+
+# Для транскрибации аудио - локальная модель Whisper
+openai-whisper==20231106
+torch==2.1.0
+torchaudio==2.1.0
+
+# Дополнительные утилиты
+pydub==0.25.1
+
+# VAD (Voice Activity Detection) для вырезания тишины
+webrtcvad==2.0.10
+
+# FFmpeg должен быть установлен в системе:
+# Linux: apt-get install ffmpeg
+# macOS: brew install ffmpeg
+# Windows: скачайте с ffmpeg.org и добавьте в PATH

@@ -1,0 +1,15 @@
+node_modules/
+build/
+dist/
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example
+downloads
+transcriptions/
+telegram-bot/downloads/
+telegram-bot/transcriptions/
+scripts/
+_pycache__/
+transcriptions/

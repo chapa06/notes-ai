@@ -1,0 +1,5 @@
+{
+  "name": "Notes Hub",
+  "description": "A centralized platform for organizing and managing notes received from external sources, featuring Telegram authentication and category-based organization.",
+  "requestFramePermissions": []
+}
