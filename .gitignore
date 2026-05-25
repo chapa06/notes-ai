@@ -13,3 +13,5 @@ telegram-bot/transcriptions/
 scripts/
 _pycache__/
 transcriptions/
+__pycache__/  
+*.pyc 
