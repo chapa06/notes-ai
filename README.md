@@ -144,12 +144,11 @@ python bot.py
 | Переменная | Описание | По умолчанию |
 |---|---|---|
 | TELEGRAM_BOT_TOKEN | Токен от @BotFather (обязательно) | - |
-| API_URL | URL сервера API | http://localhost:3000/api |
-| API_KEY | Ключ авторизации для API | - |
+| API_URL | URL сервера API для отправки транскрибаций | http://localhost:3000/api |
 | OLLAMA_BASE_URL | Адрес локальной Ollama | http://localhost:11434 |
 | OLLAMA_MODEL | Модель Ollama для анализа | qwen2.5:1.5b |
-| WHISPER_MODEL_SIZE | Размер модели: tiny, base, small, medium, large | base |
-| ADMIN_USER_ID | Telegram ID для уведомлений | - |
+| WHISPER_MODEL_SIZE | Размер модели Whisper (tiny, base, small, medium, large) | medium |
+| ADMIN_USER_ID | Telegram ID для уведомлений о запуске бота (опционально) | - |
 
 ---
 
