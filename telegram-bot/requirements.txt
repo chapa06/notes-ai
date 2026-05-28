@@ -1,21 +1,33 @@
-# Основные зависимости для Telegram бота
-python-telegram-bot==21.0
-requests==2.31.0
-aiohttp==3.8.5
-python-dotenv==1.0.0
+# ─── Telegram Bot API ────────────────────────────────────────────────
+python-telegram-bot>=21.0
 
-# Для транскрибации аудио - локальная модель Whisper
-openai-whisper==20231106
-torch==2.1.0
-torchaudio==2.1.0
+# ─── HTTP-запросы (синхронные и асинхронные) ────────────────────────
+requests>=2.31.0
+aiohttp>=3.8.5
 
-# Дополнительные утилиты
-pydub==0.25.1
+# ─── Конфигурация (.env) ─────────────────────────────────────────────
+python-dotenv>=1.0.0
 
-# VAD (Voice Activity Detection) для вырезания тишины
-webrtcvad==2.0.10
+# ─── Транскрибация (локальная модель Whisper) ────────────────────────
+openai-whisper>=20231106
+# PyTorch — бэкенд для Whisper
+# При использовании NVIDIA GPU установите версию с CUDA:
+#   pip install torch --index-url https://download.pytorch.org/whl/cu121
+torch>=2.1.0
+torchaudio>=2.1.0
 
-# FFmpeg должен быть установлен в системе:
-# Linux: apt-get install ffmpeg
-# macOS: brew install ffmpeg
-# Windows: скачайте с ffmpeg.org и добавьте в PATH
+# ─── Обработка аудио ─────────────────────────────────────────────────
+pydub>=0.25.1
+
+# ─── VAD (Voice Activity Detection) — вырезание тишины ───────────────
+webrtcvad>=2.0.10
+
+# ─── Системные зависимости (устанавливаются отдельно) ────────────────
+# FFmpeg — обязателен для конвертации аудио любого формата в WAV
+#   Windows: winget install ffmpeg
+#   Linux:   sudo apt install ffmpeg
+#   macOS:   brew install ffmpeg
+#
+# Ollama — требуется для ИИ-анализа заметок (темы, summary, категории)
+#   https://ollama.com/download
+#   После установки: ollama pull qwen2.5:1.5b && ollama serve

@@ -244,7 +244,15 @@ async function startServer() {
       if (!cat) {
         return res.status(404).json({ error: "Category not found" });
       }
-      res.json({ message: "Category deleted", id: cat._id });
+      const deletedNotes = await Note.deleteMany({
+        categoryId: id,
+        userId: new mongoose.Types.ObjectId(req.user.id),
+      });
+      res.json({
+        message: "Category deleted",
+        id: cat._id,
+        deletedNotes: deletedNotes.deletedCount,
+      });
     } catch (err) {
       console.error(err);
       res.status(500).json({ error: "Database error" });
