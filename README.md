@@ -1,208 +1,175 @@
-# Telegram Bot — Notes AI
+# Notes AI
 
-Telegram-бот для транскрибации голосовых сообщений и аудиофайлов с последующей отправкой результата в веб-приложение [Notes Hub](https://github.com/chapa06/notes-ai) как заметки.
-
-Проект является частью экосистемы **Notes AI** — единой системы для заметок с голосовым вводом, веб-интерфейсом, тегированием и ИИ-анализом.
+Система голосовых заметок с веб-интерфейсом, Telegram-ботом для транскрибации и AI-анализом.
 
 ---
 
-## Возможности
+## Автор
 
-- 🎤 **Транскрибация** голосовых сообщений Telegram
-- 🎵 **Обработка аудиофайлов** (любые форматы, конвертируемые FFmpeg)
-- 🧠 **ИИ-анализ** через локальную **Ollama** — выделение темы, краткого содержания, подбор категории
-- 📂 **Автоматическая категоризация** по личным категориям пользователя из Notes Hub
-- 🔄 **Автоотправка** на сайт Notes Hub в виде заметки
-- 💾 **Резервное локальное сохранение** при ошибках отправки
-- 🚀 **Предзагрузка модели Whisper** при старте — не ждёт загрузку при каждом голосовом
-- 🔇 **VAD-фильтр** (вырезание тишины через WebRTC VAD) — более чистый и короткий текст
-- 🎮 **Транскрибация на GPU** (NVIDIA CUDA / Apple Metal MPS) с fp16 для ускорения
-- 🏠 **Локальная модель Whisper** — бесплатно, без интернета, конфиденциально
-- 🎯 **Поддержка русского языка**
+**Чаплюк Егор Александрович**
 
----
-
-## Требования
-
-- Python 3.10+
-- Telegram Bot Token (от [@BotFather](https://t.me/BotFather))
-- **FFmpeg** (обязательно для конвертации аудио)
-- **Ollama** (локально, для ИИ-анализа заметок) — [документация по установке](https://ollama.com/download)
-- Видеокарта NVIDIA (CUDA) или Apple Silicon (MPS) для ускорения Whisper (опционально)
-
----
-
-## Установка
-
-### 1. Клонирование и настройка окружения
-
-```bash
-cd telegram-bot
-python -m venv venv
-
-# Windows:
-venv\Scripts\activate
-# Linux/Mac:
-source venv/bin/activate
-```
-
-### 2. Установка зависимостей
-
-```bash
-pip install -r requirements.txt
-```
-
-### 3. Установка FFmpeg
-
-```bash
-# Windows (через winget):
-winget install ffmpeg
-
-# Ubuntu/Debian:
-sudo apt update && sudo apt install ffmpeg
-
-# macOS:
-brew install ffmpeg
-```
-
-### 4. Установка Ollama (для ИИ-анализа)
-
-```bash
-# Установите Ollama: https://ollama.com/download
-
-# Загрузите модель (рекомендуется qwen2.5):
-ollama pull qwen2.5:1.5b
-
-# Убедитесь, что Ollama запущен:
-ollama serve
-```
-
-### 5. Настройка конфигурации
-
-Скопируйте и отредактируйте `.env`:
-
-```bash
-cp .env.example .env
-# Отредактируйте .env — вставьте свои токены
-```
-
-### 6. Запуск
-
-```bash
-python bot.py
-```
-
-При первом запуске модель Whisper автоматически загрузится (10–30 секунд) и останется в памяти.
-
----
-
-## Конфигурация (.env)
-
-| Переменная | Описание | По умолчанию |
-|---|---|---|
-| `TELEGRAM_BOT_TOKEN` | Токен от [@BotFather](https://t.me/BotFather) (обязательно) | — |
-| `API_URL` | URL сервера Notes Hub (API) | `http://localhost:3000/api` |
-| `API_KEY` | Ключ авторизации для API сервера (если требуется) | — |
-| `USER_TOKEN` | Токен пользователя для идентификации на сервере | — |
-| `OLLAMA_BASE_URL` | Адрес локальной Ollama | `http://localhost:11434` |
-| `OLLAMA_MODEL` | Модель Ollama для анализа | `qwen2.5:1.5b` |
-| `WHISPER_MODEL_SIZE` | Размер модели Whisper: `tiny`, `base`, `small`, `medium`, `large` | `medium` |
-| `MAX_AUDIO_DURATION_SECONDS` | Максимальная длина аудио в секундах | `600` (10 мин) |
-| `ADMIN_USER_ID` | Telegram ID для уведомлений о запуске бота | — |
-| `OPENAI_API_KEY` | API ключ OpenAI (если нужна облачная транскрибация, опционально) | — |
-
----
-
-## Как это работает
-
-```
-Пользователь → Голосовое / Аудиофайл
-    │
-    ▼
-1. Проверка длительности (> MAX_AUDIO_DURATION → отклонение)*
-    │
-    ▼
-2. Конвертация в WAV (16kHz, mono, 16-bit) через FFmpeg
-    │
-    ▼
-3. VAD-фильтр — вырезание участков тишины (WebRTC VAD)
-    │
-    ▼
-4. Транскрибация через локальный Whisper (GPU/CPU)
-    │
-    ▼
-5. ИИ-анализ через Ollama:
-   • определение темы
-   • выделение главной мысли (summary)
-   • подбор категории из личных категорий пользователя
-    │
-    ▼
-6. Отправка результата пользователю + на сервер Notes Hub
-    │
-    ▼
-┌─ Если ошибка отправки ─→ Локальное сохранение в `transcriptions/`
-```
-
-*\* — проверка длительности запланирована*
-
----
-
-## Интеграция с Notes Hub
-
-Бот отправляет заметки на сервер Notes Hub через API-эндпоинт:
-
-```
-POST {API_URL}/external/notes
-```
-
-Тело запроса:
-
-```json
-{
-  "telegramId": 123456789,
-  "content": "текст транскрибации",
-  "categoryName": "выбранная категория",
-  "externalId": "voice_123456789_42",
-  "source": "telegram_voice",
-  "topic": "тема заметки",
-  "summary": "краткое содержание"
-}
-```
-
-Категории для каждого пользователя загружаются с сервера Notes Hub каждые 15 секунд (фоновый кэш).
-
----
-
-## Ускорение на видеокарте
-
-Бот автоматически определяет доступное устройство:
-
-- **NVIDIA GPU** — использует CUDA
-- **Apple Silicon** (M1/M2/M3/M4) — использует MPS
-- **CPU** — если GPU не найден
-
-> ⚠️ При использовании GPU убедитесь, что установлена версия PyTorch с поддержкой CUDA:
-> ```bash
-> pip install torch==2.1.0 --index-url https://download.pytorch.org/whl/cu121
-> ```
+- Группа: КБ-231
+- 3 курс / 6 семестр
+- Направление: Кибербезопасность
+- Вид проекта: курсовая работа
 
 ---
 
 ## Структура проекта
 
 ```
-telegram-bot/
-├── bot.py              # Основной код бота
-├── requirements.txt    # Python-зависимости
-├── .env                # Конфигурация (токены, URL)
-├── .env.example        # Шаблон конфигурации
-├── README.md           # Документация
-├── downloads/          # Временные аудиофайлы
-└── transcriptions/     # Резервные копии транскрибаций
+notes-ai/
+├── server/                      # Серверная часть (Express + MongoDB)
+│   ├── index.ts                 # Точка входа
+│   ├── config.ts                # Конфигурация (env, константы)
+│   ├── types.ts                 # Типы TypeScript
+│   ├── models/                  # Mongoose модели
+│   │   ├── User.ts
+│   │   ├── Category.ts
+│   │   ├── Note.ts
+│   │   └── helpers.ts
+│   ├── middleware/
+│   │   └── auth.ts              # JWT аутентификация
+│   └── routes/
+│       ├── auth.ts              # Telegram auth
+│       ├── categories.ts        # CRUD категорий
+│       ├── notes.ts             # CRUD заметок
+│       └── external.ts          # API для Telegram-бота
+├── src/                         # Фронтенд (React + Vite)
+│   ├── main.tsx                 # Точка входа
+│   ├── App.tsx                  # Главный компонент
+│   ├── index.css                # Стили (Tailwind)
+│   ├── types/index.ts           # Типы
+│   ├── contexts/
+│   │   └── AuthContext.tsx       # Контекст авторизации
+│   ├── hooks/
+│   │   ├── useAuth.ts
+│   │   ├── useCategories.ts
+│   │   ├── useNotes.ts
+│   │   └── useToast.ts
+│   ├── components/
+│   │   ├── LoadingScreen.tsx
+│   │   ├── LoginScreen.tsx
+│   │   ├── MobileHeader.tsx
+│   │   ├── Sidebar.tsx
+│   │   ├── TopBar.tsx
+│   │   ├── NoteCard.tsx
+│   │   ├── CreateCategoryModal.tsx
+│   │   ├── ToastContainer.tsx
+│   │   ├── TelegramLoginButton.tsx
+│   │   └── ErrorBoundary.tsx
+│   └── lib/
+│       ├── api.ts               # HTTP-клиент
+│       └── utils.ts             # Утилиты (cn, formatDate)
+├── telegram-bot/                # Telegram-бот (Python)
+│   ├── bot.py                   # Оркестратор
+│   ├── config.py                # Конфигурация
+│   ├── transcriber.py           # Whisper транскрибация + VAD
+│   ├── analyzer.py              # Ollama AI анализ
+│   ├── sender.py                # Отправка на сайт
+│   └── requirements.txt
+├── package.json
+├── tsconfig.json
+├── vite.config.ts
+├── index.html
+└── .gitignore
 ```
 
 ---
 
-## Лицензия
+## Сервер (server/)
 
-MIT
+Express-сервер с MongoDB (Mongoose). Реализует REST API для заметок, категорий и Telegram-аутентификации.
+
+### API endpoints
+
+| Метод | Путь | Описание |
+|-------|------|----------|
+| POST | /api/auth/telegram | Вход через Telegram |
+| GET | /api/notes | Список заметок |
+| PATCH | /api/notes/:id | Обновление заметки |
+| DELETE | /api/notes/:id | Удаление заметки |
+| GET | /api/categories | Список категорий |
+| POST | /api/categories | Создание категории |
+| DELETE | /api/categories/:id | Удаление категории |
+| GET | /api/public/categories | Публичные категории |
+| POST | /api/external/notes | Приём заметок из бота |
+
+### Запуск
+
+```bash
+npm install
+npm run dev       # Режим разработки (Vite + сервер)
+npm run build     # Сборка для продакшена
+npm start         # Запуск собранного сервера
+```
+
+---
+
+## Telegram-бот (telegram-bot/)
+
+Бот транскрибирует голосовые сообщения и аудиофайлы через локальную модель Whisper, анализирует через Ollama и отправляет заметки на сервер.
+
+### Возможности
+
+- Транскрибация голосовых сообщений Telegram через локальный Whisper (GPU/CPU)
+- Обработка аудиофайлов любых форматов (через FFmpeg)
+- VAD-фильтр (вырезание тишины через WebRTC VAD)
+- AI-анализ через Ollama: выделение темы, краткого содержания, подбор категории
+- Автоматическая отправка на сервер Notes AI
+- Резервное локальное сохранение при ошибках отправки
+- Поддержка русского языка
+
+### Требования
+
+- Python 3.10+
+- Telegram Bot Token (от @BotFather)
+- FFmpeg (обязательно)
+- Ollama (локально, для AI-анализа)
+- Видеокарта NVIDIA (CUDA) или Apple Silicon (MPS) для ускорения Whisper (опционально)
+
+### Установка и запуск
+
+```bash
+cd telegram-bot
+python -m venv venv
+venv\Scripts\activate          # Windows
+source venv/bin/activate       # Linux/Mac
+pip install -r requirements.txt
+python bot.py
+```
+
+### Конфигурация (.env)
+
+| Переменная | Описание | По умолчанию |
+|---|---|---|
+| TELEGRAM_BOT_TOKEN | Токен от @BotFather (обязательно) | - |
+| API_URL | URL сервера API | http://localhost:3000/api |
+| API_KEY | Ключ авторизации для API | - |
+| OLLAMA_BASE_URL | Адрес локальной Ollama | http://localhost:11434 |
+| OLLAMA_MODEL | Модель Ollama для анализа | qwen2.5:1.5b |
+| WHISPER_MODEL_SIZE | Размер модели: tiny, base, small, medium, large | base |
+| ADMIN_USER_ID | Telegram ID для уведомлений | - |
+
+---
+
+## Фронтенд (src/)
+
+React SPA на Vite с Tailwind CSS. Использует Telegram Login Widget для аутентификации.
+
+### Особенности реализации
+
+- Контекст AuthContext для единого состояния авторизации
+- Кастомные хуки (useNotes, useCategories, useToast) для изоляции логики
+- Разделение UI на переиспользуемые компоненты (SRP)
+- Анимации через motion (Framer Motion)
+- Типизация через TypeScript (без any)
+
+---
+
+## Технологии
+
+- **Сервер:** Node.js, Express, MongoDB (Mongoose), JWT
+- **Фронтенд:** React 19, TypeScript, Tailwind CSS 4, Vite, motion
+- **Бот:** Python, python-telegram-bot, Whisper (openai-whisper), FFmpeg, Ollama
+- **AI:** Whisper (транскрибация), Ollama / qwen2.5 (анализ текста)
