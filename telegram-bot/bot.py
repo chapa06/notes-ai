@@ -7,6 +7,7 @@ import os
 import asyncio
 from typing import Optional
 
+import aiohttp
 from telegram import Update
 from telegram.ext import Application, MessageHandler, filters, ContextTypes
 
@@ -53,7 +54,33 @@ class TranscriptionBot:
 
         logger.info("Бот инициализирован")
 
-    # ─── Message Handlers ────────────────────────────────────────────────
+    # --- Categories Fetching -----------------------------------------------
+
+    async def _fetch_categories(self, telegram_id: int) -> list[dict]:
+        """Fetch user categories from the web API (always fresh, no cache)."""
+        url = f"{config.API_URL}/public/categories"
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(
+                    url,
+                    params={"telegramId": telegram_id},
+                    timeout=aiohttp.ClientTimeout(total=10),
+                ) as resp:
+                    if resp.status == 200:
+                        categories = await resp.json()
+                        logger.info(
+                            f"Загружено {len(categories)} категорий с сайта для {telegram_id}"
+                        )
+                        return categories
+                    else:
+                        logger.warning(
+                            f"Ошибка получения категорий: HTTP {resp.status}"
+                        )
+        except Exception as e:
+            logger.error(f"Ошибка запроса категорий: {e}")
+        return []
+
+    # --- Message Handlers --------------------------------------------------
 
     async def _download_file(
         self, file, user_id: int, message_id: int, prefix: str, ext: str
@@ -73,22 +100,25 @@ class TranscriptionBot:
         message_id: int,
         original_filename: Optional[str] = None,
     ) -> None:
-        """Common processing pipeline: transcribe → analyze → send → reply."""
-        status_msg = await update.message.reply_text("🎤 Распознаю речь...")
+        """Common processing pipeline: transcribe -> analyze -> send -> reply."""
+        status_msg = await update.message.reply_text("Распознаю речь...")
 
         try:
-            await status_msg.edit_text("🧠 Анализирую и категоризирую...")
+            await status_msg.edit_text("Анализирую и категоризирую...")
 
             transcription = await asyncio.get_event_loop().run_in_executor(
                 None, self.audio_processor.transcribe, file_path
             )
-            note_analysis = await self.analyzer.analyze(transcription, [])
+
+            # Fetch fresh categories from the website before analysis
+            categories = await self._fetch_categories(user_id)
+            note_analysis = await self.analyzer.analyze(transcription, categories)
 
             # Send reply
             await status_msg.edit_text(
-                f"📌 **Тема:** {note_analysis.get('topic')}\n"
-                f"📂 **Категория:** {note_analysis.get('category')}\n\n"
-                f"📋 **Краткое содержание:**\n{note_analysis.get('summary')}"
+                f"Тема: {note_analysis.get('topic')}\n"
+                f"Категория: {note_analysis.get('category')}\n\n"
+                f"Краткое содержание:\n{note_analysis.get('summary')}"
             )
 
             # Send to website (non-blocking)
@@ -104,11 +134,11 @@ class TranscriptionBot:
                 ),
             )
         except Exception as e:
-            logger.error(f"❌ Ошибка обработки: {e}")
+            logger.error(f"Ошибка обработки: {e}")
             try:
-                await status_msg.edit_text(f"❌ {str(e)}")
+                await status_msg.edit_text(f"Ошибка: {str(e)}")
             except Exception:
-                await update.message.reply_text(f"❌ {str(e)}")
+                await update.message.reply_text(f"Ошибка: {str(e)}")
         finally:
             if os.path.exists(file_path):
                 os.remove(file_path)
@@ -153,7 +183,7 @@ class TranscriptionBot:
             original_filename=update.message.audio.file_name,
         )
 
-    # ─── Lifecycle ───────────────────────────────────────────────────────
+    # --- Lifecycle ---------------------------------------------------------
 
     async def start(self) -> None:
         """Initialize and start polling."""
@@ -169,7 +199,7 @@ class TranscriptionBot:
             try:
                 await self.application.bot.send_message(
                     chat_id=config.ADMIN_USER_ID,
-                    text="🤖 Бот для транскрибации запущен!",
+                    text="Бот для транскрибации запущен!",
                 )
             except Exception:
                 pass

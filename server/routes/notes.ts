@@ -91,5 +91,4 @@ router.delete("/api/notes/:id", authenticateToken, async (req: AuthenticatedRequ
     res.status(500).json({ error: "Database error" });
   }
 });
-
 export default router;
