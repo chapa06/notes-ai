@@ -15,3 +15,6 @@ _pycache__/
 transcriptions/
 __pycache__/  
 *.pyc 
+docker-compose.yml
+%temp%
+docker
